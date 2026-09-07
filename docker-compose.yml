@@ -1,0 +1,69 @@
+
+# Infra local mínima
+# Levantar con:  docker compose up -d
+# Luego correr el servicio con perfiles dev,local y el emulador Pub/Sub:
+#   $env:PUBSUB_EMULATOR_HOST="localhost:8085"
+#   mvn spring-boot:run "-Dspring-boot.run.profiles=local"
+
+services:
+  # --------- PostgreSQL local ---------
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: pago_servicios
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - '5432:5432' # Puerto estándar de PostgreSQL (puedes cambiar el izquierdo si prefieres otro, ej. '5433:5432')
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d pago_servicios"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # --------- Redis (dedup Pub/Sub + caché) ---------
+  cache:
+    image: redis:7
+    restart: always
+    ports:
+      - '6379:6379'
+
+  # --------- Emulador de Google Pub/Sub ---------
+  pubsub:
+    image: gcr.io/google.com/cloudsdktool/cloud-sdk:emulators
+    restart: always
+    command: >
+      gcloud beta emulators pubsub start
+      --host-port=0.0.0.0:8085
+      --project=local-project
+    ports:
+      - '8085:8085'
+
+  # --------- Init: crea topics y subscription en el emulador ---------
+  pubsub-init:
+    image: curlimages/curl:latest
+    depends_on:
+      - pubsub
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Esperando al emulador Pub/Sub..."
+        until curl -s http://pubsub:8085/v1/projects/local-project/topics >/dev/null; do sleep 1; done
+        echo "Emulador listo. Creando topics..."
+        # Topics que PUBLICA bs-service
+        curl -s -X PUT http://pubsub:8085/v1/projects/local-project/topics/incorporate-started-publish
+        curl -s -X PUT http://pubsub:8085/v1/projects/local-project/topics/event-messaging-dead-letter-queue-publish
+        # Topic al que se suscribe bs-service (lo publica gw en el ecosistema real)
+        curl -s -X PUT http://pubsub:8085/v1/projects/local-project/topics/service-payment-bill-completed-v2-publish
+        echo "Creando subscription..."
+        curl -s -X PUT http://pubsub:8085/v1/projects/local-project/subscriptions/service-payment-bill-completed-v2-subscription \
+          -H "Content-Type: application/json" \
+          -d '{"topic":"projects/local-project/topics/service-payment-bill-completed-v2-publish","ackDeadlineSeconds":30}'
+        echo "Topics/subscriptions creados."
+
+volumes:
+  postgres_data:

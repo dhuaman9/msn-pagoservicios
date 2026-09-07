@@ -1,0 +1,195 @@
+# Application definition
+appName: bspagoservicios
+
+# Deployment & Server values
+server:
+  port: 8080
+  servlet:
+    context-path: /bspagoservicios
+  compression:
+    enabled: true
+    mime-types: application/json
+    min-response-size: 1024
+
+spring:
+  application:
+    name: bspagoservicios
+  jmx:
+    enabled: true
+  rabbitmq:
+    username: ${RABBITMQ_TRANSACTION_USR:guest}
+    password: ${RABBITMQ_TRANSACTION_PWD:guest}
+    host: ${RABBITMQ_TRANSACTION_HOST:localhost}
+    port: ${RABBITMQ_TRANSACTION_PORT:5672}
+  datasource:
+    url: ${BD_URL:jdbc:postgresql://127.0.0.1:5432/pago_servicios}
+    username: ${DATABASE_USERNAME:user}
+    password: ${DATABASE_PASSWORD:password}
+    driver-class-name: "org.postgresql.Driver"
+  hikari:
+    idle-timeout: 30000
+    login-timeout: 3
+    max-lifetime: 900000
+    minimum-idle: 2
+    validation-timeout: 3000
+    initialization-fail-timeout: 5
+    connection-timeout: 10000
+    maximum-pool-size: 10
+    keepalive-time: 30000
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: "update"
+    properties:
+      hibernate:
+        default_schema: "ecatalogo"
+    database-platform: "org.hibernate.dialect.PostgreSQLDialect"
+  jdbc:
+    template:
+      fetch-size: 10
+  flyway:
+    enabled: false
+    schemas: ecatalogo
+    default-schema: ecatalogo
+  threads:
+    virtual:
+      enabled: true
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /index.html
+    enabled: true
+  packages-to-scan: pe.financiera.bs.pagoservicios
+
+logbook:
+  format.style: json
+  include[0]: '**/v1/**'
+  exclude[0]: '**/v2/api-docs'
+  exclude[1]: '**/swagger-ui/index.html'
+  exclude[2]: '**/webjars/**'
+  exclude[3]: '**/swagger-resources/**'
+  exclude[4]: '**/csrf'
+  exclude[5]: '**/'
+  exclude[6]: '**/error'
+  exclude[7]: '**/actuator/**'
+  filter.enabled: true
+  secure-filter.enabled: true
+  obfuscate:
+    headers:
+      - Authorization
+      - X-Secret
+    parameters:
+      - access_token
+      - password
+  write:
+    level: INFO
+    category: elk-data
+    max-body-size: 100
+
+framework:
+  logging:
+    output: CONSOLE
+    level: INFO
+  auditoria:
+    queue: ${AUDITORIA_QUEUE:financieraoh-auditoria-test}
+    exchange: ${AUDITORIA_EXCHANGE:financieraoh-auditoria-exchange-test}
+    routingKey: ${AUDITORIA_ROUTINGKEY:foh.audit.test}
+
+# GCP configuration
+gcp:
+  credentials: ${GCP_CREDENTIALS:none}
+  project-id: ${GCP_PROJECT_ID:local-project}
+
+# Redis values
+redis:
+  host: ${REDIS_HOST:localhost}
+  port: ${REDIS_PORT:6379}
+
+management:
+  health:
+    rabbit:
+      enabled: false
+  endpoint:
+    shutdown:
+      enabled: true
+    health:
+      show-details: always
+      enabled: true
+    metrics:
+      enabled: true
+    info:
+      enabled: true
+    env:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  metrics:
+    tags:
+      application: bspagoservicios
+
+# Integrations (services-api)
+services-api:
+  core:
+    operation:
+      base-url: ${MSC_OPERATION:http://localhost:8081}
+      connect-timeout: ${SERVICES_API_CORE_OPERATION_CONNECT_TIMEOUT:10000}
+      read-timeout: ${SERVICES_API_CORE_OPERATION_READ_TIMEOUT:10000}
+      write-timeout: ${SERVICES_API_CORE_OPERATION_WRITE_TIMEOUT:10000}
+      max-request: 100
+      logEnabled: true
+  gateway:
+    interbank:
+      base-url: ${MSG_INTERBANK:http://localhost:8082}
+      connect-timeout: ${SERVICES_API_GATEWAY_INTERBANK_CONNECT_TIMEOUT:10000}
+      read-timeout: ${SERVICES_API_GATEWAY_INTERBANK_READ_TIMEOUT:10000}
+      write-timeout: ${SERVICES_API_GATEWAY_INTERBANK_WRITE_TIMEOUT:10000}
+      max-request: 100
+      logEnabled: true
+  ux:
+    home:
+      base-url: ${UX_HOME_SERVICE:http://localhost:8083}
+      connect-timeout: ${SERVICES_UX_HOME_SERVICECONNECT_TIMEOUT:10000}
+      read-timeout: ${SERVICES_UX_HOME_SERVICE_READ_TIMEOUT:10000}
+      write-timeout: ${SERVICES_UX_HOME_SERVICE_WRITE_TIMEOUT:10000}
+      max-request: 100
+      logEnabled: true
+  bs:
+    trxohpay:
+      base-url: ${MSN_TRX_OHPAY:http://localhost:8084}
+      connect-timeout: ${SERVICES_API_BS_TRXOHPAY_CONNECT_TIMEOUT:10000}
+      read-timeout: ${SERVICES_API_BS_TRXOHPAY_READ_TIMEOUT:10000}
+      write-timeout: ${SERVICES_API_BS_TRXOHPAY_WRITE_TIMEOUT:10000}
+      max-request: 100
+      logEnabled: true
+    producto:
+      base-url: ${MSN_PRODUCTOS:http://localhost:8085}
+      connect-timeout: ${SERVICES_API_BS_TRXOHPAY_CONNECT_TIMEOUT:10000}
+      read-timeout: ${SERVICES_API_BS_TRXOHPAY_READ_TIMEOUT:10000}
+      write-timeout: ${SERVICES_API_BS_TRXOHPAY_WRITE_TIMEOUT:10000}
+      max-request: 100
+      logEnabled: true
+
+# Queue values
+queue:
+  sp:
+    bill:
+      completed:
+        v2:
+          subscription:
+            name: service-payment-bill-completed-v2-subscription
+            max-ack-extension-period: ${BILL_COMPLETED_ACK_EXTENSION:20}
+            deduplication-lock-ttl: ${BILL_COMPLETED_LOCK_TTL:9}
+            key-ttl: ${BILL_COMPLETED_KEY_TTL:18}
+            max-retries: ${BILL_COMPLETED_MAX_RETRY:5}
+  subscription:
+    deduplication-lock-ttl: 30
+  dead:
+    letter:
+      publish:
+        name: event-messaging-dead-letter-queue-publish
+  publish:
+    incorporate-started: incorporate-started-publish
