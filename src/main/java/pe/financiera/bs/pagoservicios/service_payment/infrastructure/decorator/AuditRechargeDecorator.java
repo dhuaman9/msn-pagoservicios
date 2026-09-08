@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import pe.financiera.bs.pagoservicios.service_payment.domain.model.AuditoriaCommand;
 import pe.financiera.bs.pagoservicios.service_payment.domain.model.PaymentExecutionResult;
 import pe.financiera.bs.pagoservicios.service_payment.domain.model.PaymentRequest;
+import pe.financiera.bs.pagoservicios.service_payment.domain.model.RechargeRequest;
 import pe.financiera.bs.pagoservicios.service_payment.domain.port.in.PayRechargeUseCase;
 import pe.financiera.bs.pagoservicios.service_payment.domain.port.out.AuditoriaPort;
 import pe.financiera.bs.pagoservicios.service_payment.infrastructure.external.client.domain.ResponseWrapper;
@@ -21,7 +22,7 @@ public class AuditRechargeDecorator implements PayRechargeUseCase {
 	private final AuditoriaPort auditoriaPort;
 
 	@Override
-	public PaymentExecutionResult execute(PaymentRequest request) {
+	public PaymentExecutionResult execute(RechargeRequest request) {
 
 		ResponseWrapper<PaymentExecutionResult> auditResponse = new ResponseWrapper<>();
 		PaymentExecutionResult result;

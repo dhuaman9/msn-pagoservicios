@@ -8,6 +8,7 @@ import pe.financiera.bs.pagoservicios.service_payment.domain.port.in.CompleteBil
 import pe.financiera.bs.pagoservicios.service_payment.domain.port.out.AuditoriaPort;
 import pe.financiera.bs.pagoservicios.service_payment.domain.port.out.OperationPort;
 import pe.financiera.bs.pagoservicios.service_payment.domain.port.out.ProductoPort;
+import pe.financiera.bs.pagoservicios.service_payment.domain.port.out.PublishPaymentResultPort;
 import pe.financiera.bs.pagoservicios.service_payment.domain.port.out.TrxOhPayPort;
 import pe.financiera.bs.pagoservicios.service_payment.infrastructure.decorator.AuditCompleteBillPaymentDecorator;
 
@@ -16,10 +17,10 @@ public class CompleteBillPaymentConfig {
 
 	@Bean
 	public CompleteBillPaymentUseCase completeBillPaymentUseCase(TrxOhPayPort trxOhPayPort, OperationPort operationPort,
-			ProductoPort productoPort, AuditoriaPort auditPort) {
+			ProductoPort productoPort, AuditoriaPort auditPort, PublishPaymentResultPort publishPaymentResultPort) {
 
 		CompleteBillPaymentUseCase realInteractor = new CompleteBillPaymentInteractor(trxOhPayPort, operationPort,
-				productoPort);
+				productoPort, publishPaymentResultPort);
 
 		return new AuditCompleteBillPaymentDecorator(realInteractor, auditPort);
 	}

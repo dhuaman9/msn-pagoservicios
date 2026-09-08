@@ -6,7 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import pe.financiera.bs.pagoservicios.service_payment.domain.model.AuditoriaCommand;
 import pe.financiera.bs.pagoservicios.service_payment.domain.model.PaymentExecutionResult;
-import pe.financiera.bs.pagoservicios.service_payment.domain.model.PaymentRequest;
+import pe.financiera.bs.pagoservicios.service_payment.domain.model.RechargeRequest;
 import pe.financiera.bs.pagoservicios.service_payment.domain.port.in.PayRechargeUseCase;
 import pe.financiera.bs.pagoservicios.service_payment.domain.port.out.AuditoriaPort;
 import pe.financiera.bs.pagoservicios.service_payment.infrastructure.external.client.domain.ResponseWrapper;
@@ -31,7 +31,7 @@ class AuditRechargeDecoratorTest {
 	private PayRechargeUseCase payRechargeUseCase;
 	private AuditoriaPort auditoriaPort;
 
-	private PaymentRequest requestMock;
+	private RechargeRequest requestMock;
 	private PaymentExecutionResult resultMock;
 
 	@BeforeEach
@@ -40,7 +40,7 @@ class AuditRechargeDecoratorTest {
 		auditoriaPort = mock(AuditoriaPort.class);
 		decorator = new AuditRechargeDecorator(payRechargeUseCase, auditoriaPort);
 
-		requestMock = PaymentRequest.builder().codInterno("INT-001").recipientId("REC-001").serviceId("SVC-001")
+		requestMock = RechargeRequest.builder().codInterno("INT-001").recipientId("REC-001").serviceId("SVC-001")
 				.clientId("CLI-001").amount(BigDecimal.valueOf(50.0)).operationType(null).build();
 
 		resultMock = PaymentExecutionResult.builder().operationId("OP-RECHARGE-001")
@@ -56,7 +56,7 @@ class AuditRechargeDecoratorTest {
 	void execute_whenRechargeSuccessful_shouldCallUseCaseAndProcessAuditWithOK() {
 		// Arrange
 		when(payRechargeUseCase.execute(requestMock)).thenReturn(resultMock);
-		doNothing().when(auditoriaPort).procesarAuditoria(any(PaymentRequest.class), any(ResponseWrapper.class),
+		doNothing().when(auditoriaPort).procesarAuditoria(any(RechargeRequest.class), any(ResponseWrapper.class),
 				any(AuditoriaCommand.class));
 
 		// Act
@@ -74,7 +74,7 @@ class AuditRechargeDecoratorTest {
 	void execute_whenRechargeSuccessful_shouldExtractOperationNumberFromResult() {
 		// Arrange
 		when(payRechargeUseCase.execute(requestMock)).thenReturn(resultMock);
-		doNothing().when(auditoriaPort).procesarAuditoria(any(PaymentRequest.class), any(ResponseWrapper.class),
+		doNothing().when(auditoriaPort).procesarAuditoria(any(RechargeRequest.class), any(ResponseWrapper.class),
 				any(AuditoriaCommand.class));
 
 		// Act
@@ -89,7 +89,7 @@ class AuditRechargeDecoratorTest {
 	void execute_whenRechargeSuccessful_shouldSetAuditResponseAsDataOK() {
 		// Arrange
 		when(payRechargeUseCase.execute(requestMock)).thenReturn(resultMock);
-		doNothing().when(auditoriaPort).procesarAuditoria(any(PaymentRequest.class), any(ResponseWrapper.class),
+		doNothing().when(auditoriaPort).procesarAuditoria(any(RechargeRequest.class), any(ResponseWrapper.class),
 				any(AuditoriaCommand.class));
 
 		// Act
@@ -105,14 +105,14 @@ class AuditRechargeDecoratorTest {
 	void execute_whenRechargeSuccessful_shouldProcessAuditInFinallyBlock() {
 		// Arrange
 		when(payRechargeUseCase.execute(requestMock)).thenReturn(resultMock);
-		doNothing().when(auditoriaPort).procesarAuditoria(any(PaymentRequest.class), any(ResponseWrapper.class),
+		doNothing().when(auditoriaPort).procesarAuditoria(any(RechargeRequest.class), any(ResponseWrapper.class),
 				any(AuditoriaCommand.class));
 
 		// Act
 		decorator.execute(requestMock);
 
 		// Assert - Verify audit is processed even on success
-		verify(auditoriaPort).procesarAuditoria(any(PaymentRequest.class), any(ResponseWrapper.class),
+		verify(auditoriaPort).procesarAuditoria(any(RechargeRequest.class), any(ResponseWrapper.class),
 				any(AuditoriaCommand.class));
 	}
 
@@ -125,7 +125,7 @@ class AuditRechargeDecoratorTest {
 		// Arrange
 		RuntimeException testException = new RuntimeException("Recharge processing failed");
 		doThrow(testException).when(payRechargeUseCase).execute(requestMock);
-		doNothing().when(auditoriaPort).procesarAuditoria(any(PaymentRequest.class), any(ResponseWrapper.class),
+		doNothing().when(auditoriaPort).procesarAuditoria(any(RechargeRequest.class), any(ResponseWrapper.class),
 				any(AuditoriaCommand.class));
 
 		// Act & Assert
@@ -141,7 +141,7 @@ class AuditRechargeDecoratorTest {
 		// Arrange
 		RuntimeException testException = new RuntimeException("Insufficient balance");
 		doThrow(testException).when(payRechargeUseCase).execute(requestMock);
-		doNothing().when(auditoriaPort).procesarAuditoria(any(PaymentRequest.class), any(ResponseWrapper.class),
+		doNothing().when(auditoriaPort).procesarAuditoria(any(RechargeRequest.class), any(ResponseWrapper.class),
 				any(AuditoriaCommand.class));
 
 		// Act & Assert
@@ -157,14 +157,14 @@ class AuditRechargeDecoratorTest {
 		// Arrange
 		IllegalArgumentException testException = new IllegalArgumentException("Invalid recharge request");
 		doThrow(testException).when(payRechargeUseCase).execute(requestMock);
-		doNothing().when(auditoriaPort).procesarAuditoria(any(PaymentRequest.class), any(ResponseWrapper.class),
+		doNothing().when(auditoriaPort).procesarAuditoria(any(RechargeRequest.class), any(ResponseWrapper.class),
 				any(AuditoriaCommand.class));
 
 		// Act & Assert
 		assertThrows(IllegalArgumentException.class, () -> decorator.execute(requestMock));
 
 		// Verify that audit was still called in finally block
-		verify(auditoriaPort).procesarAuditoria(any(PaymentRequest.class), any(ResponseWrapper.class),
+		verify(auditoriaPort).procesarAuditoria(any(RechargeRequest.class), any(ResponseWrapper.class),
 				any(AuditoriaCommand.class));
 	}
 
@@ -173,7 +173,7 @@ class AuditRechargeDecoratorTest {
 		// Arrange
 		RuntimeException testException = new RuntimeException("Operator network error");
 		doThrow(testException).when(payRechargeUseCase).execute(requestMock);
-		doNothing().when(auditoriaPort).procesarAuditoria(any(PaymentRequest.class), any(ResponseWrapper.class),
+		doNothing().when(auditoriaPort).procesarAuditoria(any(RechargeRequest.class), any(ResponseWrapper.class),
 				any(AuditoriaCommand.class));
 
 		// Act & Assert

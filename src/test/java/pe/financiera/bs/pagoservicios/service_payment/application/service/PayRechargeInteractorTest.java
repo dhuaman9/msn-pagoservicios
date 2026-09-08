@@ -12,9 +12,9 @@ import pe.financiera.bs.pagoservicios.service_payment.domain.model.AutorizationR
 import pe.financiera.bs.pagoservicios.service_payment.domain.model.OperationResponse;
 import pe.financiera.bs.pagoservicios.service_payment.domain.model.OperationType;
 import pe.financiera.bs.pagoservicios.service_payment.domain.model.PaymentExecutionResult;
-import pe.financiera.bs.pagoservicios.service_payment.domain.model.PaymentRequest;
 import pe.financiera.bs.pagoservicios.service_payment.domain.model.ProductoCommand;
 import pe.financiera.bs.pagoservicios.service_payment.domain.model.ProductoResult;
+import pe.financiera.bs.pagoservicios.service_payment.domain.model.RechargeRequest;
 import pe.financiera.bs.pagoservicios.service_payment.domain.model.Recipient;
 import pe.financiera.bs.pagoservicios.service_payment.domain.model.Service;
 import pe.financiera.bs.pagoservicios.service_payment.domain.model.ServiceStatus;
@@ -55,7 +55,7 @@ class PayRechargeInteractorTest {
 	private ObjectMapper objectMapper;
 
 	private PayRechargeInteractor interactor;
-	private PaymentRequest paymentRequest;
+	private RechargeRequest rechargeRequest;
 	private ProductoResult productoResultMock;
 	private OperationResponse operationResponseMock;
 	private AutorizationResult autorizationResultMock;
@@ -69,8 +69,8 @@ class PayRechargeInteractorTest {
 		interactor = new PayRechargeInteractor(productoPort, trxOhPayPort, operationPort, externalPaymentProvider,
 				serviceRepositoryPort, recipientRepositoryPort, objectMapper);
 
-		paymentRequest = PaymentRequest.builder().codInterno("USER-001").recipientId("RECIPIENT-001")
-				.serviceId("SERVICE-001").billId("BILL-001").clientId("CLIENT-001").amount(BigDecimal.valueOf(50.00))
+		rechargeRequest = RechargeRequest.builder().codInterno("USER-001").recipientId("RECIPIENT-001")
+				.serviceId("SERVICE-001").clientId("CLIENT-001").amount(BigDecimal.valueOf(50.00))
 				.deviceUUID("DEVICE-UUID-001").operationType(OperationType.RECHARGE).build();
 
 		productoResultMock = new ProductoResult(1, "12345678", 1, "ACC-001", "N", "CARD-001", "P", "N", "JOHN DOE",
@@ -106,7 +106,7 @@ class PayRechargeInteractorTest {
 				anyString())).thenReturn(bbrTransactionMock).thenReturn(ibkTransactionMock);
 		when(trxOhPayPort.autorizar(any(AutorizacionCommand.class))).thenReturn(autorizationResultMock);
 
-		PaymentExecutionResult result = interactor.execute(paymentRequest);
+		PaymentExecutionResult result = interactor.execute(rechargeRequest);
 
 		verify(productoPort).buscarProducto(any(ProductoCommand.class));
 		verify(serviceRepositoryPort).findByRecipientAndServiceId("RECIPIENT-001", "SERVICE-001");
@@ -116,12 +116,12 @@ class PayRechargeInteractorTest {
 		verify(operationPort, times(2)).createTransaction(anyString(), anyString(), anyString(), anyString(),
 				any(BigDecimal.class), anyString());
 		verify(trxOhPayPort).autorizar(any(AutorizacionCommand.class));
-		verify(externalPaymentProvider).processPayment(any(PaymentRequest.class), anyString(), anyString(), anyString(),
+		verify(externalPaymentProvider).processDirectPayment(any(RechargeRequest.class), anyString(), anyString(), anyString(),
 				any(), any(ProductoResult.class), any(), anyString());
 
 		assertNotNull(result);
 		assertEquals("OP-001", result.getOperationId());
-		assertEquals("NUM-001", result.getOperationNumber());
+		assertEquals("TXN-AUTH-001", result.getOperationNumber());
 		assertEquals(BigDecimal.valueOf(50.00), result.getAmount());
 		assertEquals("John Recipient", result.getName());
 		assertEquals("AUTH-CODE-001", result.getAuthorizationCode());
@@ -139,7 +139,7 @@ class PayRechargeInteractorTest {
 				anyString())).thenReturn(bbrTransactionMock).thenReturn(ibkTransactionMock);
 		when(trxOhPayPort.autorizar(any(AutorizacionCommand.class))).thenReturn(autorizationResultMock);
 
-		PaymentExecutionResult result = interactor.execute(paymentRequest);
+		PaymentExecutionResult result = interactor.execute(rechargeRequest);
 
 		assertNotNull(result);
 		assertEquals("-", result.getLabelDetail());
@@ -157,7 +157,7 @@ class PayRechargeInteractorTest {
 				anyString())).thenReturn(bbrTransactionMock).thenReturn(ibkTransactionMock);
 		when(trxOhPayPort.autorizar(any(AutorizacionCommand.class))).thenReturn(autorizationResultMock);
 
-		PaymentExecutionResult result = interactor.execute(paymentRequest);
+		PaymentExecutionResult result = interactor.execute(rechargeRequest);
 
 		assertNotNull(result);
 		assertEquals("-", result.getName());
@@ -175,7 +175,7 @@ class PayRechargeInteractorTest {
 				anyString())).thenReturn(bbrTransactionMock).thenReturn(ibkTransactionMock);
 		when(trxOhPayPort.autorizar(any(AutorizacionCommand.class))).thenReturn(autorizationResultMock);
 
-		PaymentExecutionResult result = interactor.execute(paymentRequest);
+		PaymentExecutionResult result = interactor.execute(rechargeRequest);
 
 		assertNotNull(result);
 		assertEquals("-", result.getName());
@@ -184,8 +184,8 @@ class PayRechargeInteractorTest {
 
 	@Test
 	void execute_whenRequestOperationTypeIsNotRecharge_shouldEnsureRechargeType() throws JsonProcessingException {
-		PaymentRequest requestWithDifferentType = PaymentRequest.builder().codInterno("USER-001")
-				.recipientId("RECIPIENT-001").serviceId("SERVICE-001").billId("BILL-001").clientId("CLIENT-001")
+		RechargeRequest requestWithDifferentType = RechargeRequest.builder().codInterno("USER-001")
+				.recipientId("RECIPIENT-001").serviceId("SERVICE-001").clientId("CLIENT-001")
 				.amount(BigDecimal.valueOf(50.00)).deviceUUID("DEVICE-UUID-001").operationType(OperationType.RECHARGE)
 				.build();
 

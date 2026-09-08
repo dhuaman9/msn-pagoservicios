@@ -28,17 +28,24 @@ import pe.financiera.bs.pagoservicios.service_payment.domain.port.out.ServiceRep
 import pe.financiera.bs.pagoservicios.service_payment.domain.port.out.TrxOhPayPort;
 
 import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.util.Locale;
 
 import static pe.financiera.bs.pagoservicios.service_payment.application.service.constant.ServicesConstant.BLOQ_N;
+import static pe.financiera.bs.pagoservicios.service_payment.application.service.constant.ServicesConstant.CASH_OUT;
 import static pe.financiera.bs.pagoservicios.service_payment.application.service.constant.ServicesConstant.DEB_FISICO;
 import static pe.financiera.bs.pagoservicios.service_payment.application.service.constant.ServicesConstant.DEB_VIRTUAL;
 import static pe.financiera.bs.pagoservicios.service_payment.application.service.constant.ServicesConstant.PRINCIPAL;
+import static pe.financiera.bs.pagoservicios.service_payment.application.service.constant.ServicesConstant.STATUS_COMPLETED;
+import static pe.financiera.bs.pagoservicios.service_payment.application.service.constant.ServicesConstant.STATUS_PENDING;
+import static pe.financiera.bs.pagoservicios.service_payment.application.service.constant.ServicesConstant.STATUS_WAITTING_FOR_IBK;
 
 @Slf4j
 @RequiredArgsConstructor
 public class PayServiceInteractor implements PayServiceUseCase {
 	private static final String DEFAULT_VALUE = "-";
-	private static final DecimalFormat PRICE_FORMATTER = new DecimalFormat("S/ ###,##0.00");
+	private static final DecimalFormat PRICE_FORMATTER = new DecimalFormat("S/ ###,##0.00",
+			DecimalFormatSymbols.getInstance(Locale.of("es", "PE")));
 
 	private final ProductoPort productoPort;
 	private final TrxOhPayPort trxOhPayPort;
@@ -59,11 +66,11 @@ public class PayServiceInteractor implements PayServiceUseCase {
 
 		ProductoResult productoResult = productoPort.buscarProducto(productoCommand);
 
-		//TODO
+		// TODO
 		Card card = null;
 
-		Service service = serviceRepositoryPort
-				.findByRecipientAndServiceId(request.getRecipientId(), request.getServiceId());
+		Service service = serviceRepositoryPort.findByRecipientAndServiceId(request.getRecipientId(),
+				request.getServiceId());
 
 		Recipient recipient = recipientRepositoryPort.findLatestRecipientById(request.getRecipientId());
 
@@ -78,38 +85,44 @@ public class PayServiceInteractor implements PayServiceUseCase {
 
 		String operationId = createdOperation.getOperationId();
 
-		var bbrTransaction = operationPort.createTransaction(operationId, request.getCodInterno(), "CASH_OUT",
+		var bbrTransaction = operationPort.createTransaction(operationId, request.getCodInterno(), CASH_OUT,
 				"BBR_PROCESSOR", request.getAmount(), createdOperation.getOperationNumber());
 
 		AutorizacionCommand autorizacionCommand = AutorizacionCommand.builder().customerUid(productoResult.uidcliente())
 				.accountUid(productoResult.uidcuenta()).operationNumber(createdOperation.getOperationNumber())
 				.amount(request.getAmount()).customerDocumentType(String.valueOf(productoResult.tipoDocumento()))
 				.customerDocumentNumber(productoResult.numeroDocumento())
-				.customerFullName(productoResult.nombreEmbozado()).operationType(OperationType.RECHARGE).build();
+				.customerFullName(productoResult.nombreEmbozado()).operationType(OperationType.RECHARGE)
+				.recipientName(createdOperation.getDestinationName()).clientId(request.getClientId())
+				.reason(createdOperation.getDetail()).build();
 
 		AutorizationResult autorizationResult = trxOhPayPort.autorizar(autorizacionCommand);
 
-		operationPort.updateTransactionStatus(bbrTransaction.getTransactionId(), "COMPLETED", request.getCodInterno());
+		operationPort.updateTransactionStatus(bbrTransaction.getTransactionId(), STATUS_COMPLETED,
+				request.getCodInterno());
 
-		var ibkTransaction = operationPort.createTransaction(operationId, request.getCodInterno(), "CASH_OUT", "IBK",
+		var ibkTransaction = operationPort.createTransaction(operationId, request.getCodInterno(), CASH_OUT, "IBK",
 				request.getAmount(), createdOperation.getOperationNumber());
 
-		//TODO ver sourceType
+		// TODO ver sourceType
 		externalPaymentProvider.processPayment(request, operationId, createdOperation.getOperationNumber(),
 				productoResult.uidcuenta(), null, productoResult, card, additionalData);
 
-		operationPort.updateTransactionStatus(ibkTransaction.getTransactionId(), "WAITTING_FOR_IBK",
+		operationPort.updateTransactionStatus(ibkTransaction.getTransactionId(), STATUS_WAITTING_FOR_IBK,
 				request.getCodInterno());
 
-		return PaymentExecutionResult.builder().operationId(operationId)
-				.operationNumber(createdOperation.getOperationNumber())
+		String operationNumber = autorizationResult.transactionId() != null
+				? autorizationResult.transactionId()
+				: createdOperation.getOperationNumber();
+
+		return PaymentExecutionResult.builder().operationId(operationId).operationNumber(operationNumber)
 				.amount(createdOperation.getAmount() != null ? createdOperation.getAmount() : request.getAmount())
 				.amountFormat(PRICE_FORMATTER.format(request.getAmount()))
 				.labelDetail(service != null && service.getLabel() != null ? service.getLabel() : DEFAULT_VALUE)
 				.detail(createdOperation.getDescription() != null
 						? createdOperation.getDescription()
 						: "Payment service")
-				.status(createdOperation.getStatus() != null ? createdOperation.getStatus() : "PENDING")
+				.status(createdOperation.getStatus() != null ? createdOperation.getStatus() : STATUS_PENDING)
 				.authorizationCode(autorizationResult.authorizationCode()).message("Payment registered")
 				.date(parseEpochSeconds())
 				.name(recipient != null && recipient.getName() != null ? recipient.getName() : DEFAULT_VALUE)
@@ -124,19 +137,12 @@ public class PayServiceInteractor implements PayServiceUseCase {
 				.orElseThrow();
 	}
 
-	private String buildAdditionalData(Service service,
-                                       String nomEmbozado, Bill bill, PaymentRequest request) {
-		var additionalData = ServicePaymentAdditionalData
-				.builder()
-				.holderLabel(
-						ServicePaymentAdditionalData.HOLDER)
-				.holderValue(nomEmbozado)
-				.serviceLabel(
-						ServicePaymentAdditionalData.SERVICE)
+	private String buildAdditionalData(Service service, String nomEmbozado, Bill bill, PaymentRequest request) {
+		var additionalData = ServicePaymentAdditionalData.builder().holderLabel(ServicePaymentAdditionalData.HOLDER)
+				.holderValue(nomEmbozado).serviceLabel(ServicePaymentAdditionalData.SERVICE)
 				.serviceValue(service != null ? service.getName() : null)
 				.supplyNumberLabel(service != null ? service.getLabel() : null).supplyNumberValue(request.getClientId())
-				.dueDateLabel(
-						ServicePaymentAdditionalData.DUE_DATE)
+				.dueDateLabel(ServicePaymentAdditionalData.DUE_DATE)
 				.dueDateValue(bill != null ? bill.getDueDateInMillisec() : null).recipientId(request.getRecipientId())
 				.serviceId(request.getServiceId()).build();
 		try {

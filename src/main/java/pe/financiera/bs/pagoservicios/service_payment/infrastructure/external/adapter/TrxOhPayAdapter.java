@@ -84,7 +84,11 @@ public class TrxOhPayAdapter implements TrxOhPayPort {
 		boolean isRecharge = autorizacionCommand.operationType() == OperationType.RECHARGE;
 
 		String groupingCode = isRecharge ? "17" : "16";
-		String commerceName = isRecharge ? "Recarga de Celular" : "Pago de servicio";
+		String commerceLabel = isRecharge ? "Recarga de Celular" : "Pago de servicio";
+		String commerceName = autorizacionCommand.recipientName() != null
+				? autorizacionCommand.recipientName()
+				: commerceLabel;
+
 		String commerceTerminalId = isRecharge ? "5" : "4";
 
 		LocalDateTime fechaActual = LocalDateTime.now(clock);
@@ -95,6 +99,8 @@ public class TrxOhPayAdapter implements TrxOhPayPort {
 				.identDocNumber(autorizacionCommand.customerDocumentNumber())
 				.accountNumber(autorizacionCommand.accountUid()).entityCode("03").build();
 
+
+        //ver si existe campo customStr2 si existe agegar con reason sino eliminar reason
 		return AutorizationRestRequest.builder().customerUID(autorizacionCommand.customerUid())
 				.accountUID(autorizacionCommand.accountUid()).messageType("1100")
 				.operationCode(OPERATION_CODE_CASH_OUT).groupingCode(groupingCode).entryCode("03")
@@ -105,4 +111,6 @@ public class TrxOhPayAdapter implements TrxOhPayPort {
 				.commerceTrxDescription(commerceName).originAccountData(originAccountData).notificationOverride(false)
 				.usuario(autorizacionCommand.canal()).canal(autorizacionCommand.canal()).build();
 	}
+
+
 }

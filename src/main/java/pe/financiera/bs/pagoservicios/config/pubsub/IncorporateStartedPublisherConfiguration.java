@@ -19,37 +19,38 @@ import java.io.IOException;
 @Configuration
 public class IncorporateStartedPublisherConfiguration {
 
-    @Value("${queue.publish.incorporate-started}")
-    private String topicIncorporateStarted;
+	@Value("${queue.publish.incorporate-started}")
+	private String topicIncorporateStarted;
 
-    @Bean(destroyMethod = "terminate", name = "incorporateStartedHandler")
-    public PublisherHandler incorporateStartedHandler(@NonNull String projectId,
-                                                      @NonNull CredentialsProvider credentialsProvider,
-                                                      ObjectProvider<TransportChannelProvider> channelProviderProvider) throws IOException {
+	@Bean(destroyMethod = "terminate", name = "incorporateStartedHandler")
+	public PublisherHandler incorporateStartedHandler(@NonNull String projectId,
+			@NonNull CredentialsProvider credentialsProvider,
+			ObjectProvider<TransportChannelProvider> channelProviderProvider) throws IOException {
 
-        return createPublishHandler(projectId, topicIncorporateStarted, credentialsProvider, channelProviderProvider);
-    }
+		return createPublishHandler(projectId, topicIncorporateStarted, credentialsProvider, channelProviderProvider);
+	}
 
-    @Bean(name = "incorporateStartedTopic")
-    public MessagePublisher incorporateStartedMessagePublisher(@NonNull ObjectMapper objectMapper,
-                                                               @NonNull @Qualifier("incorporateStartedHandler") PublisherHandler publisherHandler) {
-        return new MessagePublisher(publisherHandler, objectMapper);
-    }
+	@Bean(name = "incorporateStartedTopic")
+	public MessagePublisher incorporateStartedMessagePublisher(@NonNull ObjectMapper objectMapper,
+			@NonNull @Qualifier("incorporateStartedHandler") PublisherHandler publisherHandler) {
+		return new MessagePublisher(publisherHandler, objectMapper);
+	}
 
-    private PublisherHandler createPublishHandler(String projectId, String topic, CredentialsProvider credentialsProvider,
-                                                  ObjectProvider<TransportChannelProvider> channelProviderProvider) throws IOException {
-        final ProjectTopicName projectTopicName = ProjectTopicName.of(projectId, topic);
-        final Publisher.Builder builder = Publisher
-            .newBuilder(projectTopicName)
-            .setCredentialsProvider(credentialsProvider);
+	private PublisherHandler createPublishHandler(String projectId, String topic,
+			CredentialsProvider credentialsProvider, ObjectProvider<TransportChannelProvider> channelProviderProvider)
+			throws IOException {
+		final ProjectTopicName projectTopicName = ProjectTopicName.of(projectId, topic);
+		final Publisher.Builder builder = Publisher.newBuilder(projectTopicName)
+				.setCredentialsProvider(credentialsProvider);
 
-        // En perfil local existe un channel provider al emulador Pub/Sub; en otros perfiles no.
-        final TransportChannelProvider channelProvider = channelProviderProvider.getIfAvailable();
-        if (channelProvider != null) {
-            builder.setChannelProvider(channelProvider);
-        }
+		// En perfil local existe un channel provider al emulador Pub/Sub; en otros
+		// perfiles no.
+		final TransportChannelProvider channelProvider = channelProviderProvider.getIfAvailable();
+		if (channelProvider != null) {
+			builder.setChannelProvider(channelProvider);
+		}
 
-        final Publisher publisher = builder.build();
-        return new PublisherHandler(publisher);
-    }
+		final Publisher publisher = builder.build();
+		return new PublisherHandler(publisher);
+	}
 }

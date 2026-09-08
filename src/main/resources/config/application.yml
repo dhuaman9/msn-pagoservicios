@@ -39,19 +39,23 @@ spring:
       maximum-pool-size: 10
   jpa:
     show-sql: false
+    flyway:
+      enabled: true
+      schemas: ecatalogo
+      default-schema: ecatalogo
+      locations: classpath:db/migration
+      baselineOnMigrate: true
     hibernate:
-      ddl-auto: "validate"
-    properties:
-      hibernate:
-        default_schema: "ecatalogo"
+      ddl-auto: "none"
+      default_schema: "ecatalogo"
     database-platform: "org.hibernate.dialect.PostgreSQLDialect"
+    properties:
+      hibernate.jdbc.batch_size: 20
+      hibernate.order_inserts: true
+      hibernate.order_updates: true
   jdbc:
     template:
       fetch-size: 10
-  flyway:
-    enabled: true
-    schemas: ecatalogo
-    default-schema: ecatalogo
   threads:
     virtual:
       enabled: true

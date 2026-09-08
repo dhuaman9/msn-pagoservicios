@@ -276,6 +276,7 @@
                                 <exclude>**/response/**</exclude>
                                 <exclude>**/repository/**</exclude>
                                 <exclude>**/exception/**</exclude>
+                                <exclude>**/client/**</exclude>
                             </excludes>
                         </configuration>
                     </execution>
@@ -298,6 +299,7 @@
                                 <exclude>**/response/**</exclude>
                                 <exclude>**/repository/**</exclude>
                                 <exclude>**/exception/**</exclude>
+                                <exclude>**/client/**</exclude>
                             </excludes>
                             <rules>
                                 <rule>

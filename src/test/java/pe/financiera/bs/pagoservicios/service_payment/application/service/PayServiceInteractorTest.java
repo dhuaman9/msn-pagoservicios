@@ -198,7 +198,7 @@ class PayServiceInteractorTest {
 
         assertNotNull(result);
         assertEquals("OP-001", result.getOperationId());
-        assertEquals("NUM-001", result.getOperationNumber());
+        assertEquals("TXN-AUTH-001", result.getOperationNumber());
         assertEquals(BigDecimal.valueOf(100.00), result.getAmount());
         assertEquals("John Recipient", result.getName());
         assertEquals("AUTH-CODE-001", result.getAuthorizationCode());

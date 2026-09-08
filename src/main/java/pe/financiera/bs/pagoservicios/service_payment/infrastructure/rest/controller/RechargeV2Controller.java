@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import pe.financiera.bs.pagoservicios.service_payment.domain.model.OperationType;
 import pe.financiera.bs.pagoservicios.service_payment.domain.model.PaymentRequest;
+import pe.financiera.bs.pagoservicios.service_payment.domain.model.RechargeRequest;
 import pe.financiera.bs.pagoservicios.service_payment.domain.port.in.FindRechargeOperatorsUseCase;
 import pe.financiera.bs.pagoservicios.service_payment.domain.port.in.PayRechargeUseCase;
 import pe.financiera.bs.pagoservicios.service_payment.infrastructure.rest.advice.model.ErrorResponse;
@@ -63,12 +64,12 @@ public class RechargeV2Controller {
 
 		String headersAsJson = headersMapper.headerToJson(headers);
 
-		PaymentRequest paymentRequest = PaymentRequest.builder().codInterno(codigoInterno)
+		RechargeRequest rechargeRequest = RechargeRequest.builder().codInterno(codigoInterno)
 				.recipientId(request.getRecipientId()).serviceId(request.getServiceId()).clientId(request.getClientId())
 				.amount(request.getAmount()).deviceUUID(deviceUuid != null ? deviceUuid : "")
 				.operationType(OperationType.RECHARGE).headersAsJson(headersAsJson).build();
 
-		var result = payRechargeUseCase.execute(paymentRequest);
+		var result = payRechargeUseCase.execute(rechargeRequest);
 
 		return ResponseEntity.ok(PaymentResultResponse.builder()
 				.operation(PaymentOperation.builder().operationId(result.getOperationId())
